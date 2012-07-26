@@ -94,7 +94,7 @@ class GridFieldDataColumns implements GridField_ColumnProvider {
 	 * Caution: Make sure to escape special php-characters like in a normal php-statement.
 	 * Example:	"myFieldName" => '<a href=\"custom-admin/$ID\">$ID</a>'.
 	 * Alternatively, pass a anonymous function, which takes two parameters:
-	 *  The value returned by Convert::raw2xml and the original list item.
+	 *  The value and the original list item.
 	 *
 	 * @param array $formatting
 	 */
