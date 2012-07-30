@@ -22,6 +22,7 @@
  * @package framework
  * @subpackage dev
  */
+require_once 'Zend/Log/Writer/Abstract.php';
 class Debug {
 	
 	/**
@@ -49,6 +50,11 @@ class Debug {
 	protected static $log_errors_to = null;
 
 	/**
+	 * @var SS_ZendLog The logger.
+	 */
+	protected static $outputLogger = null;
+
+	/**
 	 * The header of the message shown to users on the live site when a fatal error occurs.
 	 */
 	public static $friendly_error_header = 'There has been an error';
@@ -63,21 +69,29 @@ class Debug {
 	 * Debug::show() is intended to be equivalent to dprintr()
 	 */
 	static function show($val, $showHeader = true) {
-		if(!Director::isLive()) {
-			if($showHeader) {
-				$caller = Debug::caller();
-				if(Director::is_ajax() || Director::is_cli())
-					echo "Debug ($caller[class]$caller[type]$caller[function]() in " . basename($caller['file']) . ":$caller[line])\n";
-				else 
-					echo "<div style=\"background-color: white; text-align: left;\">\n<hr>\n<h3>Debug <span style=\"font-size: 65%\">($caller[class]$caller[type]$caller[function]() \nin " . basename($caller['file']) . ":$caller[line])</span>\n</h3>\n";
+		if(Director::isLive()) return;
+		$msg = '';
+		if($showHeader) {
+			$caller = Debug::caller();
+			if(Director::is_ajax() || Director::is_cli()) {
+				$msg = "Debug ($caller[class]$caller[type]$caller[function]() in " 
+					. basename($caller['file']) . ":$caller[line])\n";
+			} else {
+				$msg = "<div style=\"background-color: white; color: black; text-align: left;\">\n<hr>\n"
+				.self::callerInfo();
 			}
-			
-			echo Debug::text($val);
-	
-			if(!Director::is_ajax() && !Director::is_cli()) echo "</div>";
-			else echo "\n\n";
 		}
-
+			
+		$msg .= Debug::text($val);
+		$msg .= (!Director::is_ajax() && !Director::is_cli()) ? "</div>" : "\n\n";
+		self::out($msg);
+	}
+	
+	protected static function callerInfo(){
+		$caller = Debug::caller();
+		return "<h3>Debug \n".'<span style="font-size: 65%">('
+				.$caller['class'].$caller['type'].$caller['function']."() \nin "
+				. basename($caller['file']) . ":$caller[line])</span>\n</h3>\n";
 	}
 	
 	/**
@@ -86,12 +100,9 @@ class Debug {
 	 * @param mixed $val
 	 */
 	static function endshow($val) {
-		if(!Director::isLive()) {
-			$caller = Debug::caller();
-			echo "<hr>\n<h3>Debug \n<span style=\"font-size: 65%\">($caller[class]$caller[type]$caller[function]() \nin " . basename($caller['file']) . ":$caller[line])</span>\n</h3>\n";
-			echo Debug::text($val);
-			die();
-		}
+		if(Director::isLive()) return;
+		self::out("<hr>\n".self::callerInfo().Debug::text($val));
+		die();
 	}
 	
 	/**
@@ -100,12 +111,12 @@ class Debug {
 	 * @param mixed $val
 	 */
 	static function dump($val) {
-		echo '<pre style="background-color:#ccc;padding:5px;font-size:14px;line-height:18px;">';
+		$msg = '<pre style="background-color:#ccc;padding:5px;font-size:14px;line-height:18px;">';
 		$caller = Debug::caller();
-		echo "<span style=\"font-size: 12px;color:#666;\">" . basename($caller['file']) . ":$caller[line] - </span>\n";
-		if (is_string($val)) print_r(wordwrap($val, 100));
-		else print_r($val);
-		echo '</pre>';
+		$msg .= "<span style=\"font-size: 12px;color:#666;\">" . basename($caller['file']) . ":$caller[line] - </span>\n";
+		$msg .= is_string($val) ? print_r(wordwrap($val, 100), 1):print_r($val,1);
+		$msg .= '</pre>';
+		self::out($msg);
 	}
 
 	/**
@@ -141,7 +152,7 @@ class Debug {
 			$val = '(bool) ' . $val;
 		} else {
 			if(!Director::is_cli() && !Director::is_ajax()) {
-				$val = "<pre style=\"font-family: Courier new\">" . htmlentities($val, ENT_COMPAT, 'UTF-8') . "</pre>\n";
+				$val = "<pre>" . htmlentities($val, ENT_COMPAT, 'UTF-8') . "</pre>\n";
 			}
 		}
 
@@ -152,17 +163,18 @@ class Debug {
 	 * Show a debugging message
 	 */
 	static function message($message, $showHeader = true) {
-		if(!Director::isLive()) {
-			$caller = Debug::caller();
-			$file = basename($caller['file']);
-			if(Director::is_cli()) {
-				if($showHeader) echo "Debug (line $caller[line] of $file):\n ";
-				echo $message . "\n";
-			} else {
-				echo "<p style=\"background-color: white; color: black; width: 95%; margin: 0.5em; padding: 0.3em; border: 1px #CCC solid\">\n";
-				if($showHeader) echo "<b>Debug (line $caller[line] of $file):</b>\n ";
-				echo Convert::raw2xml($message) . "</p>\n";
-			}
+		if(Director::isLive()) return;
+		$msg = '';
+		$caller = Debug::caller();
+		$file = basename($caller['file']);
+		if(Director::is_cli()) {
+			if($showHeader) $msg .= "Debug (line $caller[line] of $file):\n ";
+			$msg .= $message . "\n";
+		} else {
+			$msg .= '<p style="background-color: white; color: black; width: 95%;'
+				." margin: 0.5em; padding: 0.3em; border: 1px #CCC solid\">\n";
+			if($showHeader) $msg .= "<b>Debug (line $caller[line] of $file):</b>\n ";
+			$msg .= Convert::raw2xml($message) . "</p>\n";
 		}
 	}
 	
@@ -195,6 +207,40 @@ class Debug {
 		$oldcontent = (file_exists($file)) ? file_get_contents($file) : '';
 		$content = $oldcontent . "\n\n== $now ==\n$message\n";
 		file_put_contents($file, $content);
+	}
+
+	/**
+	 * Print a message by forwarding it to the outputLogger.
+	 * 
+	 * @param string $message the message
+	 * @param int $priority see constants in SS_Log
+	 */
+	static function out($message, $priority = SS_Log::NOTICE){
+		if(self::$outputLogger == null){
+			self::$outputLogger = new SS_ZendLog();
+			self::$outputLogger->addWriter(DebugEchoWriter::factory());
+		}
+		self::$outputLogger->log($message, $priority);
+	}
+
+	/**
+	 * Get the outputLogger.
+	 * @return SS_ZendLog
+	 */
+	static function getOutputLogger(){
+		return self::$outputLogger;
+	}
+
+	/**
+	 * Replace the default output writer with $newWriter
+	 * If the default writer was already replaced earlier,
+	 *  $newWriter will be added to the writers without replacing the previous one.
+	 * 
+	 * @param Zend_Log_Writer_Abstract $newWriter
+	 */
+	static function replaceDefaultOutputWriter(Zend_Log_Writer_Abstract $newWriter){
+		self::$outputLogger->removeWriter(DebugEchoWriter::factory());
+		self::$outputLogger->addWriter($newWriter);
 	}
 
 	/**
@@ -380,8 +426,8 @@ class Debug {
 	 */
 	static function showError($errno, $errstr, $errfile, $errline, $errcontext, $errtype) {
 		if(!headers_sent()) {
-			$errText = "$errtype at line $errline of $errfile";
-			$errText = str_replace(array("\n","\r")," ",$errText);
+			$errText = str_replace(array("\n","\r")," ",
+				"$errtype at line $errline of $errfile");
 
 			if(!headers_sent()) header($_SERVER['SERVER_PROTOCOL'] . " 500 $errText");
 			
@@ -390,9 +436,6 @@ class Debug {
 				header('Content-Type: text/plain');
 			} 
 		}
-		
-		// Legacy error handling for customized prototype.js Ajax.Base.responseIsSuccess()
-		// if(Director::is_ajax()) echo "ERROR:\n";
 		
 		$reporter = self::create_debug_view();
 		
@@ -427,21 +470,18 @@ class Debug {
 	 * @param int $errline
 	 */
 	static function showLines($errfile, $errline) {
-		$lines = file($errfile);
 		$offset = $errline-10;
-		$lines = array_slice($lines, $offset, 16);
-		echo '<pre>';
+		$lines = array_slice($errfile, $offset, 16);
+		$msg = '<pre>';
 		$offset++;
 		foreach($lines as $line) {
 			$line = htmlentities($line, ENT_COMPAT, 'UTF-8');
-			if ($offset == $errline) {
-				echo "<span>$offset</span> <span class=\"error\">$line</span>";
-			} else {
-				echo "<span>$offset</span> $line";
-			}
+			$msg .= "<span>$offset</span> "
+				.($offset == $errline ? "<span class=\"error\">$line</span>":$line);
 			$offset++;
 		}
-		echo '</pre>';		
+		$msg .= '</pre>';
+		self::out($msg);
 	}
 
 	/**
