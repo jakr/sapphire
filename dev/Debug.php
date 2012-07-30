@@ -208,6 +208,7 @@ class Debug {
 		$content = $oldcontent . "\n\n== $now ==\n$message\n";
 		file_put_contents($file, $content);
 	}
+	
 
 	/**
 	 * Print a message by forwarding it to the outputLogger.
@@ -216,11 +217,7 @@ class Debug {
 	 * @param int $priority see constants in SS_Log
 	 */
 	static function out($message, $priority = SS_Log::NOTICE){
-		if(self::$outputLogger == null){
-			self::$outputLogger = new SS_ZendLog();
-			self::$outputLogger->addWriter(DebugEchoWriter::factory());
-		}
-		self::$outputLogger->log($message, $priority);
+		self::getOutputLogger()->log($message, $priority);
 	}
 
 	/**
@@ -228,6 +225,10 @@ class Debug {
 	 * @return SS_ZendLog
 	 */
 	static function getOutputLogger(){
+		if(self::$outputLogger == null){
+			self::$outputLogger = new SS_ZendLog();
+			self::$outputLogger->addWriter(DebugEchoWriter::factory());
+		}
 		return self::$outputLogger;
 	}
 
@@ -239,8 +240,9 @@ class Debug {
 	 * @param Zend_Log_Writer_Abstract $newWriter
 	 */
 	static function replaceDefaultOutputWriter(Zend_Log_Writer_Abstract $newWriter){
-		self::$outputLogger->removeWriter(DebugEchoWriter::factory());
-		self::$outputLogger->addWriter($newWriter);
+		$logger = self::getOutputLogger();
+		$logger->removeWriter(DebugEchoWriter::factory());
+		$logger->addWriter($newWriter);
 	}
 
 	/**
