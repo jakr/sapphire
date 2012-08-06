@@ -162,7 +162,7 @@ class Debug {
 	/**
 	 * Show a debugging message
 	 */
-	static function message($message, $showHeader = true) {
+	static function message($message, $showHeader = true, $streamID = '') {
 		if(Director::isLive()) return;
 		$msg = '';
 		$caller = Debug::caller();
@@ -176,7 +176,7 @@ class Debug {
 			if($showHeader) $msg .= "<b>Debug (line $caller[line] of $file):</b>\n ";
 			$msg .= Convert::raw2xml($message) . "</p>\n";
 		}
-		self::out($msg);
+		self::out($msg, $streamID);
 	}
 	
 	// Keep track of how many headers have been sent
@@ -215,10 +215,13 @@ class Debug {
 	 * Print a message by forwarding it to the outputLogger.
 	 * 
 	 * @param string $message the message
+	 * @param streamID optional. The id of the stream. It is up to the log writer
+	 *  to map streams to outputs.
 	 * @param int $priority see constants in SS_Log
 	 */
-	static function out($message, $priority = SS_Log::NOTICE){
-		self::getOutputLogger()->log($message, $priority);
+	static function out($message, $streamID = '', $priority = SS_Log::NOTICE){
+		$extras = $streamID != '' ? array('streamID' => $streamID) : null;
+		self::getOutputLogger($streamID)->log($message, $priority, $extras);
 	}
 
 	/**

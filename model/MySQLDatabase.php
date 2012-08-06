@@ -121,7 +121,7 @@ class MySQLDatabase extends SS_Database {
 
 		if(isset($_REQUEST['showqueries']) && Director::isDev(true)) {
 			$endtime = round(microtime(true) - $starttime,4);
-			Debug::message("\n$sql\n{$endtime}ms\n", false);
+			Debug::message("\n$sql\n{$endtime}ms\n", false, __class__);
 		}
 
 		if(!$handle && $errorLevel) $this->databaseError("Couldn't run query: $sql | " . $this->dbConn->error, $errorLevel);
