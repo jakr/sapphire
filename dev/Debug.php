@@ -176,6 +176,7 @@ class Debug {
 			if($showHeader) $msg .= "<b>Debug (line $caller[line] of $file):</b>\n ";
 			$msg .= Convert::raw2xml($message) . "</p>\n";
 		}
+		self::out($msg);
 	}
 	
 	// Keep track of how many headers have been sent
