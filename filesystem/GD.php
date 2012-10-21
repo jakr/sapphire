@@ -27,7 +27,29 @@ class GDBackend extends Object implements Image_Backend {
 		}
 	}
 
+	/**
+	 * @param width int The width of the image
+	 * @param height int The height of the image
+	 * @return boolean true if the image might fit in memory, false otherwise
+	 */
+	public static function image_larger_than_available_memory($filename){
+		list($width, $height, $type, $attr) = getimagesize($filename);
+		$memory_limit = ini_get('memory_limit');
+		$unit = strtoupper(substr($memo_limit, -1));
+		$memory_limit = (int) $memory_limit;
+		switch($unit){
+			case 'G': $memory_limit *= 1024;//fall through
+			case 'M': $memory_limit *= 1024;//fall through
+			case 'K': $memory_limit *= 1024;//fall through
+		}
+		$memory_required = $width*$height*4;
+		return $memory_needed + memory_get_usage() < $memory_limit
+	}
+
 	public function __construct($filename = null) {
+		// Check for _lock file, if it exists we crashed while opening this file --> do not try again 
+		if(file_exists($filename.'_lock') || image_larger_than_available_memory($filename)) return;
+		fclose(fopen($filename.'_lock', 'w')); //create _lock file
 		// If we're working with image resampling, things could take a while.  Bump up the time-limit
 		increase_time_limit_to(300);
 
@@ -53,6 +75,7 @@ class GDBackend extends Object implements Image_Backend {
 			}
 		}
 		
+		unlink($filename.'_lock'); //opening the file was successfull --> delete the _lock file. 
 		parent::__construct();
 
 		$this->quality = $this->config()->default_quality;
