@@ -35,7 +35,7 @@ class GDBackend extends Object implements Image_Backend {
 	public static function image_fits_available_memory($filename){
 		list($width, $height, $type, $attr) = getimagesize($filename);
 		$memory_limit = ini_get('memory_limit');
-		$unit = strtoupper(substr($memo_limit, -1));
+		$unit = strtoupper(substr($memory_limit, -1));
 		$memory_limit = (int) $memory_limit;
 		switch($unit){
 			case 'G': $memory_limit *= 1024;//fall through
