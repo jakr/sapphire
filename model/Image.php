@@ -720,7 +720,8 @@ class Image extends File {
 	protected function onBeforeDelete() {
 		parent::onBeforeDelete(); 
 
-		$lockfile = $this->getFullPath().'_lock';
+		$pathInfo = pathinfo($this->getFullPath());
+		$lockfile = $pathInfo['dirname'] . '.lock.' . $pathInfo['filename'];
 		if(file_exists($lockfile)) unlink($lockfile);
 		$this->deleteFormattedImages();
 	}
