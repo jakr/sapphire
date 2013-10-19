@@ -44,14 +44,14 @@ class GDBackend extends Object implements Image_Backend {
 	}
 	
 	private static function get_lockfile_name($filename) {
-		$pathInfo = pathinfo($filename)
+		$pathInfo = pathinfo($filename);
 		return $pathInfo['dirname'] . '.lock.' . $pathInfo['filename'];
 	}
 
 	public function __construct($filename = null) {
 		// Check for _lock file, if it exists we crashed while opening this file --> do not try again 
-		if(file_exists(get_lockfile_name($filename)) || !self::image_fits_available_memory($filename)) return;
-		fclose(fopen(get_lockfile_name($filename), 'w')); //create .lock file
+		if(file_exists(self::get_lockfile_name($filename)) || !self::image_fits_available_memory($filename)) return;
+		fclose(fopen(self::get_lockfile_name($filename), 'w')); //create .lock file
 		// If we're working with image resampling, things could take a while.  Bump up the time-limit
 		increase_time_limit_to(300);
 
@@ -77,7 +77,7 @@ class GDBackend extends Object implements Image_Backend {
 			}
 		}
 		
-		unlink(get_lockfile_name($filename)); //opening the file was successfull --> delete the _lock file. 
+		unlink(self::get_lockfile_name($filename)); //opening the file was successfull --> delete the _lock file. 
 		parent::__construct();
 
 		$this->quality = $this->config()->default_quality;

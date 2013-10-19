@@ -302,4 +302,15 @@ class ImageTest extends SapphireTest {
 		$secondImagePath = $secondImage->getRelativePath();
 		$this->assertEquals($secondImagePath, $secondImage->Filename);
 	}
+
+	public function testLockfileRemovalOnImageDelete() {
+		$testFile = $this->objFromFixture('Image', 'deletion_test_image');
+		print_r($testFile);
+		$pathInfo = pathinfo($testFile->getFullPath());
+		$lockfile = $pathInfo['dirname'] . '.lock.' . $pathInfo['filename'];
+		fclose(fopen(self::get_lockfile_name($lockfile), 'w')); //create .lock file
+		$this->assertTrue(file_exists($lockfile));
+		$testFile->delete();
+		$this->assertFalse(file_exists($lockfile));
+	}
 }
