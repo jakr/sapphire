@@ -721,6 +721,8 @@ class Image extends File {
 		parent::onBeforeDelete(); 
 
 		$this->deleteFormattedImages();
+		$backend = self::$backend;
+		$backend::cleanupBeforeDelete(Director::baseFolder()."/" . $this->Filename);
 	}
 }
 

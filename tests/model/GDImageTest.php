@@ -25,4 +25,14 @@ class GDImageTest extends ImageTest {
 			$file->write();
 		}
 	}
+
+	public function testLockfileRemovalOnImageDelete() {
+		$testFile = $this->objFromFixture('Image', 'deletion_test_image');
+		$pathInfo = pathinfo($testFile->getFullPath());
+		$lockfile = $pathInfo['dirname'] . '.lock.' . $pathInfo['filename'];
+		touch($lockfile); //create .lock file
+		$this->assertTrue(file_exists($lockfile));
+		$testFile->delete();
+		$this->assertFalse(file_exists($lockfile));
+	}
 }

@@ -264,5 +264,9 @@ class ImagickBackend extends Imagick implements Image_Backend {
 		$new->ThumbnailImage($width,$height,true);
 		return $new;
 	}
+
+	public static function cleanupBeforeDelete($filename){
+		return; //No cleanup required.
+	}
 }
 }

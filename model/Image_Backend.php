@@ -110,4 +110,10 @@ interface Image_Backend {
 	 * @return Image_Backend
 	 */
 	public function croppedResize($width, $height);
+
+	/**
+	 * Called by the client before the image is deleted.
+	 * You can overload this to delete internal files created by the Image_Backend.
+	 */
+	public static function cleanupBeforeDelete($filename);
 }

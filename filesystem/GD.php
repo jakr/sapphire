@@ -27,11 +27,37 @@ class GDBackend extends Object implements Image_Backend {
 		}
 	}
 
+	/**
+	 * @param filename string The filename of the image
+	 * @param height int The height of the image
+	 * @return boolean true if the image might fit in memory, false otherwise
+	 */
+	private static function image_fits_available_memory($filename) {
+		$memory_limit = translate_memstring(ini_get('memory_limit'));
+		if($memory_limit < 0) return true; //no memory_limit == -1
+		$imageInfo = getimagesize($filename);
+		//bytes per channel (round up, default 1) * channels (default 4 rgba).
+		$bytes_per_pixel = (isset($imageInfo['bits']) ? ($imageInfo['bits']+7)/8 : 1)
+			* (isset($imageInfo['channels']) ? $imageInfo['channels'] : 4);
+		//number of pixels (width * height) * bytes per pixel
+		$memory_required = $imageInfo[0]*$imageInfo[1]*$bytes_per_pixel;
+		return $memory_required + memory_get_usage() < $memory_limit;
+	}
+
+	private static function get_lockfile_name($filename) {
+		$pathInfo = pathinfo($filename);
+		return $pathInfo['dirname'] . '.lock.' . $pathInfo['filename'];
+	}
+
 	public function __construct($filename = null) {
 		// If we're working with image resampling, things could take a while.  Bump up the time-limit
 		increase_time_limit_to(300);
 
 		if($filename) {
+			// Check for _lock file, if it exists we crashed while opening this file --> do not try again 
+			if(file_exists(self::get_lockfile_name($filename)) || !self::image_fits_available_memory($filename)) return;
+			touch(self::get_lockfile_name($filename));
+
 			// We use getimagesize instead of extension checking, because sometimes extensions are wrong.
 			list($width, $height, $type, $attr) = getimagesize($filename);
 			switch($type) {
@@ -51,13 +77,14 @@ class GDBackend extends Object implements Image_Backend {
 					}
 					break;
 			}
+			unlink(self::get_lockfile_name($filename)); //opening the file was successfull --> delete the _lock file. 
 		}
 		
 		parent::__construct();
 
 		$this->quality = $this->config()->default_quality;
 	}
-	
+
 	public function setImageResource($resource) {
 		$this->gd = $resource;
 		$this->width = imagesx($resource);
@@ -470,6 +497,11 @@ class GDBackend extends Object implements Image_Backend {
 			}
 			if(file_exists($filename)) @chmod($filename,0664);
 		}
+	}
+
+	public static function cleanupBeforeDelete($filename){
+		$lockfile = self::get_lockfile_name($filename);
+		if(file_exists($lockfile)) unlink($lockfile);
 	}
 	
 }
